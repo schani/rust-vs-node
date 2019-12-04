@@ -8,6 +8,8 @@ trait ValueProducer {
     fn add_listener(&mut self, l: Rc<RefCell<dyn Listener>>);
 }
 
+type RcValueProducer = Rc<RefCell<dyn ValueProducer>>;
+
 trait Listener {
     fn set_dirty(&mut self);
 }
@@ -43,27 +45,27 @@ impl ValueProducer for Row {
     }
 }
 
-struct ToLowerCase {
+struct ToLowercase {
     input: Rc<RefCell<dyn ValueProducer>>,
     current: Option<Value>,
 }
 
-impl ToLowerCase {
-    fn new(input: Rc<RefCell<dyn ValueProducer>>) -> ToLowerCase {
-        ToLowerCase {
+impl ToLowercase {
+    fn new(input: Rc<RefCell<dyn ValueProducer>>) -> ToLowercase {
+        ToLowercase {
             input,
             current: None,
         }
     }
 }
 
-impl Listener for ToLowerCase {
+impl Listener for ToLowercase {
     fn set_dirty(&mut self) {
         self.current = None;
     }
 }
 
-impl ValueProducer for ToLowerCase {
+impl ValueProducer for ToLowercase {
     fn get_current(&mut self) -> Value {
         match &self.current {
             None => {
@@ -80,49 +82,60 @@ impl ValueProducer for ToLowerCase {
     fn add_listener(&mut self, _l: Rc<RefCell<dyn Listener>>) {}
 }
 
-// struct Query {
-//     equal_to: Value,
-// }
+struct Query {
+    equal_to: Value,
+}
 
-// struct NoIndex {
-//     rows: &'a Vec<RefCell<Row>>,
-// }
+struct NoIndex {
+    rows: Vec<RcValueProducer>,
+}
 
-// fn run_query(idx: NoIndex, q: Query) -> Vec<usize> {
-//     let mut result: Vec<usize> = Vec::new();
-//     for (pos, e) in idx.rows.iter().enumerate() {
-//         if e.borrow().data == q.equal_to {
-//             result.push(pos);
-//         }
-//     }
-//     return result;
-// }
+impl NoIndex {
+    fn new(rows: &Vec<RcValueProducer>) -> NoIndex {
+        let mut idx = NoIndex { rows: vec![] };
+        for r in rows.iter() {
+            idx.rows.push(Rc::clone(r));
+        }
+        return idx;
+    }
+
+    fn run_query(&self, q: &Query) -> Vec<usize> {
+        let mut result: Vec<usize> = Vec::new();
+        for (pos, e) in self.rows.iter().enumerate() {
+            if e.borrow_mut().get_current() == q.equal_to {
+                result.push(pos);
+            }
+        }
+        return result;
+    }
+}
+
+fn make_to_lowercase(input: RcValueProducer) -> RcValueProducer {
+    let tl = Rc::new(RefCell::new(ToLowercase::new(Rc::clone(&input))));
+    input
+        .borrow_mut()
+        .add_listener(Rc::clone(&tl) as Rc<RefCell<dyn Listener>>);
+    return tl;
+}
 
 fn main() {
-    let mut v: Vec<Rc<RefCell<dyn ValueProducer>>> = Vec::new();
+    let mut v: Vec<RcValueProducer> = Vec::new();
 
     let r1 = Rc::new(RefCell::new(Row::new("Foo")));
     let r2 = Rc::new(RefCell::new(Row::new("BAr")));
-    v.push(Rc::clone(&r1) as Rc<RefCell<dyn ValueProducer>>);
-    v.push(Rc::clone(&r2) as Rc<RefCell<dyn ValueProducer>>);
+    let tl = make_to_lowercase(Rc::clone(&r1) as RcValueProducer);
 
-    // let idx = NoIndex { rows: &v };
+    v.push(Rc::clone(&tl) as RcValueProducer);
+    v.push(Rc::clone(&r2) as RcValueProducer);
 
-    let tl = Rc::new(RefCell::new(ToLowerCase::new(
-        Rc::clone(&r1) as Rc<RefCell<dyn ValueProducer>>
-    )));
-    r1.borrow_mut()
-        .add_listener(Rc::clone(&tl) as Rc<RefCell<dyn Listener>>);
+    let idx = NoIndex::new(&v);
 
     println!("row {}", tl.borrow_mut().get_current());
     r1.borrow_mut().set(Rc::new(String::from("QuuX")));
     println!("row {}", tl.borrow_mut().get_current());
 
-    // let result = run_query(
-    //     idx,
-    //     Query {
-    //         equal_to: String::from("bar"),
-    //     },
-    // );
-    // println!("{:?}", result);
+    let result = idx.run_query(&Query {
+        equal_to: Rc::new(String::from("quux")),
+    });
+    println!("{:?}", result);
 }
