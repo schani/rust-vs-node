@@ -125,23 +125,21 @@ fn make_to_lowercase(input: RcValueProducer) -> RcValueProducer {
 }
 
 fn main() {
-    let mut v: Vec<RcValueProducer> = Vec::new();
-
-    let r1 = Rc::new(RefCell::new(Row::new("Foo")));
-    let r2 = Rc::new(RefCell::new(Row::new("BAr")));
-    let tl = make_to_lowercase(Rc::clone(&r1) as RcValueProducer);
-
-    v.push(Rc::clone(&tl) as RcValueProducer);
-    v.push(Rc::clone(&r2) as RcValueProducer);
-
-    let idx = NoIndex::new(&v);
-
-    println!("row {}", tl.borrow_mut().get_current());
-    r1.borrow_mut().set(Rc::new(String::from("QuuX")));
-    println!("row {}", tl.borrow_mut().get_current());
-
-    let result = idx.run_query(&Query {
-        equal_to: Rc::new(String::from("quux")),
-    });
-    println!("{:?}", result);
+    for _number in 0..100000 {
+        let mut v: Vec<RcValueProducer> = Vec::new();
+        let r1 = Rc::new(RefCell::new(Row::new("Foo")));
+        let r2 = Rc::new(RefCell::new(Row::new("BAr")));
+        let tl = make_to_lowercase(Rc::clone(&r1) as RcValueProducer);
+        v.push(Rc::clone(&tl) as RcValueProducer);
+        v.push(Rc::clone(&r2) as RcValueProducer);
+        let idx = NoIndex::new(&v);
+        // println!("row {}", tl.borrow_mut().get_current());
+        r1.borrow_mut().set(Rc::new(String::from("QuuX")));
+        // println!("row {}", tl.borrow_mut().get_current());
+        let result = idx.run_query(&Query {
+            equal_to: Rc::new(String::from("quux")),
+        });
+        assert_eq!(result.len(), 1);
+        // println!("{:?}", result);
+    }
 }
