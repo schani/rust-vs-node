@@ -4,18 +4,18 @@ use std::rc::Weak;
 
 type Value = Rc<String>;
 
+trait Listener {
+    fn set_dirty(&mut self);
+}
+
+type WeakListener = Weak<RefCell<dyn Listener>>;
+
 trait ValueProducer {
     fn get_current(&mut self) -> Value;
     fn add_listener(&mut self, l: WeakListener);
 }
 
 type RcValueProducer = Rc<RefCell<dyn ValueProducer>>;
-
-trait Listener {
-    fn set_dirty(&mut self);
-}
-
-type WeakListener = Weak<RefCell<dyn Listener>>;
 
 struct Row {
     data: Value,
