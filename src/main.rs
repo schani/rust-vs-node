@@ -1,11 +1,12 @@
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::rc::Weak;
 
 type Value = Rc<String>;
 
 trait ValueProducer {
     fn get_current(&mut self) -> Value;
-    fn add_listener(&mut self, l: Rc<RefCell<dyn Listener>>);
+    fn add_listener(&mut self, l: Weak<RefCell<dyn Listener>>);
 }
 
 type RcValueProducer = Rc<RefCell<dyn ValueProducer>>;
@@ -16,7 +17,7 @@ trait Listener {
 
 struct Row {
     data: Value,
-    listeners: Vec<Rc<RefCell<dyn Listener>>>,
+    listeners: Vec<Weak<RefCell<dyn Listener>>>,
 }
 
 impl Row {
@@ -30,7 +31,10 @@ impl Row {
     fn set(&mut self, v: Value) {
         self.data = v;
         for l in self.listeners.iter() {
-            l.borrow_mut().set_dirty()
+            match l.upgrade() {
+                Some(rc) => rc.borrow_mut().set_dirty(),
+                None => (),
+            }
         }
     }
 }
@@ -40,7 +44,7 @@ impl ValueProducer for Row {
         return Rc::clone(&self.data);
     }
 
-    fn add_listener(&mut self, l: Rc<RefCell<dyn Listener>>) {
+    fn add_listener(&mut self, l: Weak<RefCell<dyn Listener>>) {
         self.listeners.push(l);
     }
 }
@@ -79,7 +83,7 @@ impl ValueProducer for ToLowercase {
         }
     }
 
-    fn add_listener(&mut self, _l: Rc<RefCell<dyn Listener>>) {}
+    fn add_listener(&mut self, _l: Weak<RefCell<dyn Listener>>) {}
 }
 
 struct Query {
@@ -114,7 +118,7 @@ fn make_to_lowercase(input: RcValueProducer) -> RcValueProducer {
     let tl = Rc::new(RefCell::new(ToLowercase::new(Rc::clone(&input))));
     input
         .borrow_mut()
-        .add_listener(Rc::clone(&tl) as Rc<RefCell<dyn Listener>>);
+        .add_listener(Rc::downgrade(&tl) as Weak<RefCell<dyn Listener>>);
     return tl;
 }
 
