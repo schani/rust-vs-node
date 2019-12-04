@@ -6,7 +6,7 @@ type Value = Rc<String>;
 
 trait ValueProducer {
     fn get_current(&mut self) -> Value;
-    fn add_listener(&mut self, l: Weak<RefCell<dyn Listener>>);
+    fn add_listener(&mut self, l: WeakListener);
 }
 
 type RcValueProducer = Rc<RefCell<dyn ValueProducer>>;
@@ -15,9 +15,11 @@ trait Listener {
     fn set_dirty(&mut self);
 }
 
+type WeakListener = Weak<RefCell<dyn Listener>>;
+
 struct Row {
     data: Value,
-    listeners: Vec<Weak<RefCell<dyn Listener>>>,
+    listeners: Vec<WeakListener>,
 }
 
 impl Row {
@@ -44,7 +46,7 @@ impl ValueProducer for Row {
         return Rc::clone(&self.data);
     }
 
-    fn add_listener(&mut self, l: Weak<RefCell<dyn Listener>>) {
+    fn add_listener(&mut self, l: WeakListener) {
         self.listeners.push(l);
     }
 }
