@@ -125,7 +125,7 @@ fn make_to_lowercase(input: RcValueProducer) -> RcValueProducer {
 }
 
 fn main() {
-    for _i in 0..100000 {
+    for _i in 0..10 {
         let mut v: Vec<RcValueProducer> = Vec::new();
         let r1 = Rc::new(RefCell::new(Row::new("Foo")));
         let r2 = Rc::new(RefCell::new(Row::new("BAr")));
@@ -138,19 +138,22 @@ fn main() {
         });
         assert_eq!(result.len(), 0);
 
-        for _j in 0..100 {
-            r1.borrow_mut().set(Rc::new(String::from("quuX")));
-            let result = idx.run_query(&Query {
-                equal_to: Rc::new(String::from("quux")),
-            });
+        let q1 = Query {
+            equal_to: Rc::new(String::from("foo")),
+        };
+        let q2 = Query {
+            equal_to: Rc::new(String::from("BAr")),
+        };
+
+        for _j in 0..1000000 {
+            // r1.borrow_mut().set(Rc::new(String::from("quuX")));
+            let result = idx.run_query(&q1);
             assert_eq!(result.len(), 1);
 
             // println!("row {}", tl.borrow_mut().get_current());
-            r1.borrow_mut().set(Rc::new(String::from("QuuX")));
+            // r1.borrow_mut().set(Rc::new(String::from("QuuX")));
             // println!("row {}", tl.borrow_mut().get_current());
-            let result = idx.run_query(&Query {
-                equal_to: Rc::new(String::from("quux")),
-            });
+            let result = idx.run_query(&q2);
             assert_eq!(result.len(), 1);
             // println!("{:?}", result);
         }

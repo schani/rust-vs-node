@@ -78,7 +78,7 @@ function makeToLowercase(input: ValueProducer): ValueProducer {
 }
 
 function main(): void {
-  for (let i = 0; i < 100000; i++) {
+  for (let i = 0; i < 10; i++) {
     const r1 = new Row("Foo");
     const r2 = new Row("BAr");
     const tl = makeToLowercase(r1);
@@ -88,15 +88,19 @@ function main(): void {
     if (result.length !== 0) {
       throw new Error("Failed");
     }
-    for (let j = 0; j < 100; j++) {
-      r1.set("quuX");
-      result = idx.runQuery({ equalTo: "quux" });
+
+    const q1 = { equalTo: "foo" };
+    const q2 = { equalTo: "BAr" };
+
+    for (let j = 0; j < 1000000; j++) {
+      //   r1.set("quuX");
+      result = idx.runQuery(q1);
       if (result.length !== 1 || result[0] !== 0) {
         throw new Error("Failed");
       }
-      r1.set("BOO");
-      result = idx.runQuery({ equalTo: "boo" });
-      if (result.length !== 1 || result[0] !== 0) {
+      //   r1.set("BOO");
+      result = idx.runQuery(q2);
+      if (result.length !== 1 || result[0] !== 1) {
         throw new Error("Failed");
       }
     }
